@@ -25,6 +25,21 @@ switch(command) {
     case 'show-tree':
         require('../tests/show-tree')(args[0])
         break;
+    case 'commit-tree':
+        const tree = args[0]
+        const messageIndex = args.indexOf('-m')
+        const parentIndex = args.indexOf('-p')
+
+        if (messageIndex === -1) {
+            console.error('Error: -m flag required for commit message')
+            process.exit(1)
+        }
+
+        const message = args[messageIndex + 1]
+        const parent = parentIndex !== -1 ? args[parentIndex + 1] : null
+        const commitHash = require('../src/commands/commit-tree') (tree, message, parent)
+        console.log(commitHash);
+        break;
     default:
         console.log("Unknown Command")
         break;

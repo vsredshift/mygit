@@ -28,8 +28,8 @@ function parseObject(buffer) {
 
     const [type, size] = header.split(' ')
 
-    console.log(`type: ${type}`)
-    console.log(`size: ${size}`)
+    console.log(`Type: ${type}`)
+    console.log(`Size: ${size} bytes`)
     console.log(`-------------------------`)
 
     if (type === 'blob') {

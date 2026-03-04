@@ -52,6 +52,13 @@ switch(command) {
         const commitMessage = args[msgIndex + 1];
         require('../src/commands/commit')(commitMessage);
         break;
+    case "log":
+        // Usage: mygit log [--oneline]
+        const options = {
+            oneline: args.includes('--oneline')
+        };
+        require('../src/commands/log')(options);
+        break;
     default:
         console.log("Unknown Command")
         break;

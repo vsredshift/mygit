@@ -70,6 +70,10 @@ switch(command) {
         const hash = args[1];
         require('../src/commands/cat-file')(mode, hash);
         break;
+    case 'branch':
+        // Usage: mygit branch <options> [branch-name]
+        require('../src/commands/branch')(args);
+        break;
     default:
         console.log("Unknown Command")
         break;

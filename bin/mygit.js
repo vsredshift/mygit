@@ -74,6 +74,9 @@ switch(command) {
         // Usage: mygit branch <options> [branch-name]
         require('../src/commands/branch')(args);
         break;
+    case 'checkout':
+        require('../src/commands/checkout')(args)
+        break;
     default:
         console.log("Unknown Command")
         break;

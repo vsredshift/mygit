@@ -98,10 +98,10 @@ function prettyPrint(hash, type, content) {
     }
 }
 
-function catFile(mode, hash) {
+function catFile(flags, hash) {
     // 1. Validate inputs
 
-    if (!mode || !hash) {
+    if (!flags || !hash) {
         console.error('Usage: mygit cat-file -p|-s|-t <hash-object>')
         process.exit(1)
     }
@@ -127,7 +127,7 @@ function catFile(mode, hash) {
 
     // 3. Handle different modes
 
-    switch (mode) {
+    switch (flags) {
         case '-t':
             console.log(type)
             break;
@@ -138,7 +138,7 @@ function catFile(mode, hash) {
             prettyPrint(fullHash, type, content)
             break;
         default:
-            console.error(`Unknown mode: ${mode}`)
+            console.error(`Unknown mode: ${flags}`)
             console.error('Usage: mygit cat-file [-t | -s | -p] <object>');
             process.exit(1);
     }

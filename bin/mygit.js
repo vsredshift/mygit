@@ -77,7 +77,11 @@ switch(command) {
     case 'checkout':
         require('../src/commands/checkout')(args)
         break;
+    case 'help':
+    case '-h':
+        require('../src/utils/displayHelp')(args[0])
+        break;
     default:
-        console.log("Unknown Command")
+        require('../src/utils/displayHelp')()
         break;
 }

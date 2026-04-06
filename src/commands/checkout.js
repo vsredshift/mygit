@@ -1,95 +1,9 @@
 const fs = require('fs');
 const path = require('path');
-const zlib = require('zlib');
 
-function getCurrentBranch() {
-    const gitDir = path.join(process.cwd(), '.mygit');
-    const headPath = path.join(gitDir, 'HEAD');
-    
-    if (!fs.existsSync(headPath)) {
-        return null;
-    }
-    
-    const headContent = fs.readFileSync(headPath, 'utf-8').trim();
-    
-    if (headContent.startsWith('ref: ')) {
-        const branchRef = headContent.substring(5);
-        return branchRef.replace('refs/heads/', '');
-    }
-    
-    return null;
-}
-
-function readObject(hash) {
-    const gitDir = path.join(process.cwd(), '.mygit');
-    const dir = hash.slice(0, 2);
-    const filename = hash.slice(2);
-    const objectPath = path.join(gitDir, 'objects', dir, filename);
-    
-    if (!fs.existsSync(objectPath)) {
-        throw new Error(`Object ${hash} not found at ${objectPath}`);
-    }
-    
-    const compressed = fs.readFileSync(objectPath);
-    const decompressed = zlib.inflateSync(compressed);
-    
-    const nullIndex = decompressed.indexOf(0);
-    
-    if (nullIndex === -1) {
-        throw new Error(`Malformed object ${hash}: no null byte separator`);
-    }
-    
-    const header = decompressed.slice(0, nullIndex).toString();
-    const content = decompressed.slice(nullIndex + 1);
-    
-    return { header, content };
-}
-
-function parseTree(content) {
-    if (!content || !Buffer.isBuffer(content)) {
-        throw new Error('Tree content must be a Buffer');
-    }
-    
-    if (content.length === 0) {
-        return [];
-    }
-    
-    const entries = [];
-    let offset = 0;
-    
-    while (offset < content.length) {
-        let nullPos = offset;
-        while (nullPos < content.length && content[nullPos] !== 0) {
-        nullPos++;
-        }
-        
-        if (nullPos >= content.length) {
-        throw new Error('Malformed tree: missing null terminator');
-        }
-        
-        const entry = content.slice(offset, nullPos).toString();
-        const spaceIndex = entry.indexOf(' ');
-        
-        if (spaceIndex === -1) {
-        throw new Error(`Malformed tree entry: ${entry}`);
-        }
-        
-        const mode = entry.substring(0, spaceIndex);
-        const name = entry.substring(spaceIndex + 1);
-        
-        if (nullPos + 21 > content.length) {
-        throw new Error('Malformed tree: incomplete hash');
-        }
-        
-        const hashBytes = content.slice(nullPos + 1, nullPos + 21);
-        const hash = hashBytes.toString('hex');
-        
-        entries.push({ mode, name, hash });
-        offset = nullPos + 21;
-    }
-    
-    return entries;
-}
+const getCurrentBranch = require('../helpers/getCurrentBranch')
+const readObject = require('../helpers/readObject')
+const parseTree = require('../helpers/parseTree')
 
 function readTree(treeHash, prefix = '') {
     const { content } = readObject(treeHash);
@@ -144,22 +58,22 @@ function updateWorkingDirectory(targetFiles) {
     // Delete files that shouldn't exist
     for (const filePath of currentFiles) {
         if (!targetFiles[filePath]) {
-        const fullPath = path.join(repoRoot, filePath);
-        fs.unlinkSync(fullPath);
-        
-        let dir = path.dirname(fullPath);
-        while (dir !== repoRoot) {
-            try {
-            if (fs.readdirSync(dir).length === 0) {
-                fs.rmdirSync(dir);
-                dir = path.dirname(dir);
-            } else {
-                break;
+            const fullPath = path.join(repoRoot, filePath);
+            fs.unlinkSync(fullPath);
+            
+            let dir = path.dirname(fullPath);
+            while (dir !== repoRoot) {
+                try {
+                    if (fs.readdirSync(dir).length === 0) {
+                        fs.rmdirSync(dir);
+                        dir = path.dirname(dir);
+                    } else {
+                        break;
+                    }
+                } catch (error) {
+                    break;
+                }
             }
-            } catch (error) {
-            break;
-            }
-        }
         }
     }
     
@@ -330,7 +244,7 @@ function checkout(args) {
     }
     
     // --10. update HEAD to point to new branch 
-    const headPath = path.join(gitDir, 'HEAD');
+    const headPath = path.join(mygitDir, 'HEAD');
     fs.writeFileSync(headPath, `ref: refs/heads/${branchName}\n`);
 
     // --11. Print success message for feedback

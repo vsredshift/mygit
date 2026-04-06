@@ -1,53 +1,12 @@
 const fs = require('fs')
 const path = require('path')
-const zlib = require('zlib')
 const crypto = require('crypto')
 
 const colors = require('../utils/colors')
 const readObject = require('../helpers/readObject')
 const parseTree = require('../helpers/parseTree')
-
-function getCurrentBranch() {
-    const mygitDir = path.join(process.cwd(), '.mygit')
-    const headPath = path.join(mygitDir, 'HEAD')
-
-    if (!fs.existsSync(headPath)) {
-        return null
-    }
-
-    const headContent = fs.readFileSync(headPath, 'utf-8').trim()
-
-    if (headContent.startsWith('ref: ')) {
-        const branchRef = headContent.substring(5)
-        return branchRef.replace('refs/heads/', "")
-    }
-
-    return null
-}
-
-function getCurrentCommit() {
-    const mygitDir = path.join(process.cwd(), '.mygit')
-    const headPath = path.join(mygitDir, 'HEAD');
-
-    if (!fs.existsSync(headPath)) {
-        return null;
-    }
-    
-    const headContent = fs.readFileSync(headPath, 'utf-8').trim();
-    
-    if (headContent.startsWith('ref: ')) {
-        const branchRef = headContent.substring(5);
-        const branchPath = path.join(mygitDir, branchRef);
-        
-        if (!fs.existsSync(branchPath)) {
-        return null;
-        }
-        
-        return fs.readFileSync(branchPath, 'utf-8').trim();
-    }
-    
-    return headContent;
-}
+const getCurrentBranch = require('../helpers/getCurrentBranch')
+const getCurrentCommit = require('../helpers/getCurrentCommit')
 
 function readTree(treeHash, prefix='') {
     // Recursively read a tree and return all the files
@@ -59,7 +18,7 @@ function readTree(treeHash, prefix='') {
     const files = {}
 
     for (const entry of entries) {
-        const fullPath = prefix ? path.join(prefix, entry.name) : entry.name
+        const fullPath = prefix ? path.join(prefix, entry.name).split(path.sep).join('/') : entry.name
 
         if (entry.mode === "40000") {
             const subfiles = readTree(entry.hash, fullPath)
@@ -143,7 +102,7 @@ function status() {
             console.log('Untracked files:');
             console.log('  (use "mygit add <file>..." to include in what will be committed)\n');
             for (const file of fileList) {
-                console.log(`\t${file}`)
+                console.log(`${colors.red}\t${file}${colors.reset}`)
             }
             console.log('')
         }
@@ -228,7 +187,7 @@ function status() {
 
         deleted.sort();
         for (const file of deleted) {
-            console.log(`\tdeleted:    ${file}`);
+            console.log(`${colors.red}\tdeleted:    ${file}${colors.reset}`);
         }
     }
 

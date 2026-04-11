@@ -1,7 +1,101 @@
 const fs = require('fs')
 const path = require('path')
-const writeTree = require('./write-tree')
+const crypto = require('crypto')
+const zlib = require('zlib')
+
 const commitTree = require('./commit-tree')
+const hashObjectContent = require('../helpers/hashObjectContent')
+
+
+function readIndex() {
+    const indexPath = path.join(process.cwd(), '.mygit', 'index')
+
+    if (!fs.existsSync(indexPath)) {
+        return {version: 1, entries: {}}
+    }
+
+    const content = fs.readFileSync(indexPath, 'utf-8')
+
+    return JSON.parse(content)
+}
+
+function writeTreeFromIndex(entries, prefix='') {
+    // Create a tree from index entries 
+    // Group entries by directory and create tree objecs recursively
+
+    // Filter entries for 'this level'
+    const thisLevel = {}
+    const subDirs = {}
+
+    for (const [filePath, fileInfo] of Object.entries(entries)) {
+        // Skip if it does not match prefix 
+        if (prefix && !filePath.startsWith(prefix)) {
+            continue
+        }
+
+        // Get relative path from this level
+        const relativePath = prefix ? filePath.substring(prefix.length) : filePath
+
+        // Remove leading slashes if present 
+        const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath
+        if (!cleanPath) continue
+
+        const parts = cleanPath.split('/')
+
+        if (parts.length === 1) {
+            thisLevel[parts[0]] = fileInfo
+        } else {
+            // File in subdirectory
+            const dirName = parts[0]
+            if (!subDirs[dirName]) {
+                subDirs[dirName] = {}
+            }
+
+            const subPath = parts.slice(1).join('/')
+            subDirs[dirName][subPath] = fileInfo
+        }
+    }
+
+    // Build tree entries 
+    const treeEntries = []
+
+    // Add subdirectories (trees)
+    for (const [dirName, dirEntries] of Object.entries(subDirs)) {
+        const treeHash = writeTreeFromIndex(
+            Object.fromEntries(Object.entries(dirEntries).map(([p, info]) => [p, info])), ""
+        )
+
+        const entry = Buffer.concat([
+            Buffer.from(`40000 ${dirName}\0`),
+            Buffer.from(treeHash, 'hex')
+        ])
+
+        treeEntries.push({name: dirName, entry})
+    }
+
+    // Add files (blobs)
+    for (const [fileName, fileInfo] of Object.entries(thisLevel)) {
+        const entry = Buffer.concat([
+            Buffer.from(`${fileInfo.mode} ${fileName}\0`),
+            Buffer.from(fileInfo.hash, 'hex')
+        ]);
+    
+        treeEntries.push({ name: fileName, entry });
+    }
+
+    // Sort entries (real git sorts them too )
+    treeEntries.sort((a, b) => a.name.localeCompare(b.name))
+
+    // concatenate all entries
+    const treeContent = Buffer.concat(treeEntries.map(e => e.entry))
+
+    // Hash and store tree
+
+    const treeHash = hashObjectContent(treeContent, 'tree')
+
+    return treeHash
+}
+
 
 
 function commit(message) {
@@ -13,18 +107,29 @@ function commit(message) {
     }
 
     // Check if you're in a mygit repository
-    const gitDir = path.join(process.cwd(), '.mygit')
+    const mygitDir = path.join(process.cwd(), '.mygit')
 
-    if (!fs.existsSync(gitDir)) {
+    if (!fs.existsSync(mygitDir)) {
         console.error('fatal: not a mygit repository');
         console.error('Run "mygit init" first');
         process.exit(1);
     }
 
+    //  Read index 
+    const index = readIndex()
+
+    if (Object.keys(index.entries).length === 0) {
+        console.error('nothing to commit (use "mygit add" to stage files)');
+        process.exit(1);
+    }
+
+    // create tree from index
+    const treeHash = writeTreeFromIndex(index.entries)
+
     // 3. Read HEAD to find current branch
     // HEAD contains something like: "ref: refs/heads/main"
     // We need to extract "refs/heads/main" from this
-    const headPath = path.join(gitDir, "HEAD")
+    const headPath = path.join(mygitDir, "HEAD")
     const headContent =fs.readFileSync(headPath, 'utf-8').trim()
 
     // Check if HEAD is a symbolic reference (pointing to a branch)
@@ -40,7 +145,7 @@ function commit(message) {
     // The branch file contains the hash of the last commit on that branch.
     // If this is the first commit, the branch file won't exist yet.
 
-    const branchPath = path.join(gitDir, branchRef)
+    const branchPath = path.join(mygitDir, branchRef)
     let parentCommit = null 
 
     if(fs.existsSync(branchPath)) {
@@ -57,8 +162,6 @@ function commit(message) {
         console.log(`Creating initial commit on branch ${branchRef.split('/').pop()}`)
     }
 
-    //  5. Create tree snapshot
-    const treeHash = writeTree()
 
     // 6. Create commit object
     const commitHash = commitTree(treeHash, message, parentCommit)

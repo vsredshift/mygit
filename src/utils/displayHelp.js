@@ -10,6 +10,7 @@ function displayHelp(command="") {
     console.log(`   mygit <command> [<options/flags>] [<args>]\n`)
     console.log(`   ${colors.green}COMMANDS:${colors.reset}\n`)
     console.log('   init'.padEnd(16) + 'Create an empty mygit repo')
+    console.log('   add'.padEnd(16) + 'Add file contents to the staging area')
     console.log('   commit'.padEnd(16) + 'Record changes to the repo')
     console.log('   log'.padEnd(16) + 'Show commit logs')
     console.log('   branch'.padEnd(16) + 'List branches')
@@ -30,8 +31,14 @@ function getCommandHelp(command) {
         case 'cat-file':
             catFileHelp()
             break;
+        case 'add':
+            addHelp()
+            break;
         case 'commit':
             commitHelp()
+            break
+        case 'status':
+            statusHelp()
             break
         case 'log':
             logHelp()
@@ -52,6 +59,13 @@ function getCommandHelp(command) {
             console.log('   Unknown command')
             break
     }
+}
+
+function statusHelp() {
+    console.log('')
+    console.log('   status'.padEnd(16) + 'Shows the current status of your files in a specific branch\n')
+    console.log('   mygit status')
+    console.log('')
 }
 function catFileHelp() {
     console.log('')
@@ -74,7 +88,7 @@ function commitHelp() {
 function logHelp() {
     console.log('')
     console.log('   log'.padEnd(16) + 'Show commit logs\n')
-    console.log('   mygit log')
+    console.log('   mygit log [--oneline]')
     console.log('   --oneline'.padEnd(16) + 'Show commit logs in one-line format')
     console.log('')
 }
@@ -109,6 +123,14 @@ function branchHelp() {
     console.log('   -v, --verbose'. padEnd(19) + 'List branches with commit and message info')
     console.log('   -d, --delete'.padEnd(19) + 'Delete a branch')
     console.log('   <name>'.padEnd(19) + "Create a new branch")
+    console.log('')
+}
+
+function addHelp() {
+    console.log('')
+    console.log('   add'.padEnd(16) + 'Add files to the staging area for committing.\n')
+    console.log('   mygit add <file\\s>')
+    console.log('')
 }
 
 module.exports = displayHelp

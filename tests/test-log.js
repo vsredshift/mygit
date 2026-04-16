@@ -5,6 +5,10 @@ const { execSync } = require('child_process');
 const testDir = path.join(__dirname, 'test-log-temp');
 
 function cleanup() {
+  try {
+    process.chdir(__dirname)
+  } catch (error) {}
+
   if (fs.existsSync(testDir)) {
     fs.rmSync(testDir, { recursive: true, force: true });
   }
@@ -34,6 +38,7 @@ if (!output1.includes('No commits yet')) {
 
 // Test 2: Single commit
 fs.writeFileSync('test.txt', 'hello');
+run('mygit add test.txt')
 run('mygit commit -m "First commit"');
 const output2 = run('mygit log');
 if (!output2.includes('First commit')) {
@@ -44,8 +49,10 @@ if (!output2.includes('First commit')) {
 
 // Test 3: Multiple commits in order
 fs.writeFileSync('test2.txt', 'world');
+run('mygit add test2.txt')
 run('mygit commit -m "Second commit"');
 fs.writeFileSync('test3.txt', 'foo');
+run('mygit test3.txt')
 run('mygit commit -m "Third commit"');
 
 const output3 = run('mygit log');

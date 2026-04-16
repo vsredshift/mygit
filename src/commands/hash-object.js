@@ -3,6 +3,10 @@ const path = require('path')
 const crypto = require('crypto') 
 const zlib = require('zlib') 
 
+/*
+Blob object structure
+    'blob <size>\0<content>'  -*/ 
+
 function hashObject(filePath, write=true) {
     const absolutePath = path.resolve(filePath)
     const content = fs.readFileSync(absolutePath)
@@ -29,7 +33,6 @@ function hashObject(filePath, write=true) {
 
         // Compress the whole storeBuffer
         const compressed = zlib.deflateSync(storeBuffer)
-        console.log("Debug Compressed", compressed)
 
         // Write the compressed blob object to the file
         if (!fs.existsSync(objPath)) {

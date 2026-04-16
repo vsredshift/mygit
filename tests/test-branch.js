@@ -5,6 +5,9 @@ const { execSync } = require('child_process');
 const testDir = path.join(__dirname, 'test-branch-temp');
 
 function cleanup() {
+    try {
+        process.chdir(__dirname)
+    } catch (error) {}
     if (fs.existsSync(testDir)) {
         fs.rmSync(testDir, { recursive: true, force: true });
     }
@@ -34,9 +37,10 @@ if (!output1.includes('No branches')) {
 
 // Test 2: Main branch appears after commit
 fs.writeFileSync('test.txt', 'hello');
+run('mygit add test.txt');
 run('mygit commit -m "Initial"');
 const output2 = run('mygit branch');
-if (!output2.includes('* main')) {
+if (!output2.startsWith('* main')) {
     console.log('❌ Should show main branch after commit');
 } else {
     console.log('✅ Shows main branch after first commit');

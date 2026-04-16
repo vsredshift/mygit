@@ -9,6 +9,7 @@ switch(command) {
         break;
     case 'add':
         require('../src/commands/add')(args)
+        break;
     case 'hash-object':
         const hashObj = require('../src/commands/hash-object')(args[0])
         console.log(hashObj)

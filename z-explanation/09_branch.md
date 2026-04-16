@@ -12,16 +12,16 @@ It will let you create, list, rename, and delete branches. When you create a new
 The `branch` command is implemented in the `branch` function in the `src/commands/branch.js` file. The function takes an array of arguments as input and performs the appropriate action based on the first argument.
 
 For this implementation we are also importing some helper functions from other files.
-    - `getCurrentBranch()` - Returns the name of the current branch, or null if HEAD is not a symbolic reference.
-    - `getCurrentCommit()` - Returns the hash of the current commit, or null if HEAD is not a symbolic reference.
+- `getCurrentBranch()` - Returns the name of the current branch, or null if HEAD is not a symbolic reference.
+- `getCurrentCommit()` - Returns the hash of the current commit, or null if HEAD is not a symbolic reference.
 
 There are several functions in this file.
-    - `getAllBranches()` - Lists all branches in refs/heads.
-    - `getCommitMessage()` - Returns the commit message for the given commit hash.
-    - `listBranches()` - Lists all branches in the repository.
-    - `createBranch()` - Creates a new branch pointing to current commit.
-    - `deleteBranch()` - Deletes the specified branch.
-    - `branch()` - The main function that handles the `branch` command.
+- `getAllBranches()` - Lists all branches in refs/heads.
+- `getCommitMessage()` - Returns the commit message for the given commit hash.
+- `listBranches()` - Lists all branches in the repository.
+- `createBranch()` - Creates a new branch pointing to current commit.
+- `deleteBranch()` - Deletes the specified branch.
+- `branch()` - The main function that handles the `branch` command.
 
 ## Implementation of each function
 

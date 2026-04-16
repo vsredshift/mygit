@@ -1,29 +1,13 @@
 const fs = require('fs')
 const path = require('path')
-const crypto = require('crypto')
-const zlib = require('zlib')
+
 
 const getFileMode =  require('../helpers/getFileMode')
+const hashObjectContent = require('../helpers/hashObjectContent')
+const readIndex = require('../helpers/readIndex')
 
 function getIndexPath() {
     return path.join(process.cwd(), '.mygit', 'index')
-}
-
-function readIndex() {
-    const indexPath = getIndexPath()
-
-    if (!fs.existsSync(indexPath)) {
-        return {version: 1, entries: {}}
-    }
-
-    try {
-        const content = fs.readFileSync(indexPath, 'utf-8')
-        return JSON.parse(content)
-    } catch (error) {
-        console.error('error: unable to read index')
-        console.error(error.message)
-        process.exit(1)
-    }
 }
 
 function writeIndex(index) {
@@ -38,31 +22,6 @@ function writeIndex(index) {
     }
 }
 
-function hashObjectContent(content, type='blob') {
-    // Hash and store content as a blob
-
-    const header = `${type} ${content.length}\0`
-    const store = Buffer.concat([Buffer.from(header), content])
-    const hash = crypto.createHash('sha1').update(store).digest('hex')
-
-    // Compress and store
-
-    const compressed = zlib.deflateSync(store)
-
-    const dir = hash.slice(0, 2)
-    const filename = hash.slice(2)
-    const objectsDir = path.join(process.cwd(), '.mygit', 'objects')
-    const objDir = path.join(objectsDir, dir)
-    const objPath = path.join(objDir, filename)
-
-    fs.mkdirSync(objDir, {recursive: true})
-
-    if (!fs.existsSync(objPath)) {
-        fs.writeFileSync(objPath, compressed)
-    }
-
-    return hash
-}
 
 function normalizePath(filePath) {
     // Normialize path to use foward slashes
@@ -75,9 +34,9 @@ function normalizePath(filePath) {
     let relativePath = path.relative(repoRoot, absolutePath)
 
     // Convert to foward slashes (git's internal format)
-    relativePath.split(path.sep).join('/')
+    const modifiedPath = relativePath.split(path.sep).join('/')
 
-    return relativePath
+    return modifiedPath
 }
 
 function addFile(filePath) {

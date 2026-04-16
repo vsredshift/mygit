@@ -9,6 +9,8 @@ const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
 
+const colors  = require('../utils/colors')
+
 function readObject(hash) {
     // 1. Read the object from .mygit/objects
 
@@ -94,7 +96,7 @@ function formatCommit(hash, commit, isShort=false) {
 
     // Full format: hash, author, date, message (like git log)
 
-    let output = `commit ${hash}\n`
+    let output = `${colors.yellow}commit ${hash}${colors.reset}\n`
 
     // Parse author info for nice display
     if (commit.author) {

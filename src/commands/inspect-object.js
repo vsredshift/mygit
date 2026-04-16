@@ -15,7 +15,7 @@ function parseTree(buffer) {
             .slice(nullIndex + 1, nullIndex + 21)
             .toString('hex')
 
-        console.log(`${mode} ${name} ${hash}`)
+        console.log(`${mode.padStart(6, '0')} ${name} ${hash}`)
 
         i = nullIndex + 21
     }

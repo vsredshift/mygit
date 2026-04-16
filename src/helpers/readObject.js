@@ -4,7 +4,10 @@ const zlib = require('zlib')
 /**
  * Reads a git object (hash) from disk and returns its header and content.
  * @param {string} hash - The hash of the object to read.
- * @returns {object} - An object with two properties: 'header' and 'content'. 'header' is a string representing the header of the object, and 'content' is a Buffer containing the content of the object.
+ * @returns {Object} - An object with four properties: 'header', 'content', 'type', 'size'. 'header' is a string representing the header of the object, 
+ * the 'content' is a Buffer containing the content of the object, 
+ * the 'type' is the type of object of the entry and 
+ * the 'size' is the size of the object in bytes
  * @throws {Error} - If the object is not found, or if it is malformed (i.e. it does not contain a null byte separator).
  */
 function readObject(hash) {

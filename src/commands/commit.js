@@ -1,7 +1,5 @@
 const fs = require('fs')
 const path = require('path')
-const crypto = require('crypto')
-const zlib = require('zlib')
 
 const commitTree = require('./commit-tree')
 const hashObjectContent = require('../helpers/hashObjectContent')

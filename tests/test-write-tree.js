@@ -6,6 +6,11 @@ const { execSync } = require('child_process');
 const testDir = path.join(__dirname, 'test-temp');
 
 function cleanup() {
+
+  try {
+    process.chdir(__dirname)
+  } catch (error) {}
+
     if (fs.existsSync(testDir)) {
         fs.rmSync(testDir, { recursive: true, force: true });
     }
@@ -34,7 +39,26 @@ function test(name, fn) {
     }
 }
 
+function countFiles(dir) {
+  let count =0 
+
+  const entries = fs.readdirSync(dir, {withFileTypes: true})
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name)
+
+    if (entry.isFile()) {
+      count++
+    } else if (entry.isDirectory()) {
+      count += countFiles(fullPath)
+    }
+  }
+
+  return count
+}
 // ============ TESTS ============
+
+console.log('\n🧪 Running tests...\n');
 
 test('creates objects for single file', () => {
   run('mygit init');
@@ -43,9 +67,10 @@ test('creates objects for single file', () => {
   const hash = run('mygit write-tree');
   
   // Check that objects were created
-  const objectsCount = execSync('find .mygit/objects -type f | wc -l', { encoding: 'utf-8' }).trim();
+  const objectPath = path.join(process.cwd(), '.mygit', 'objects')
+  const objectsCount = countFiles(objectPath);
   
-  if (objectsCount !== '2') {
+  if (objectsCount !== 2) {
     throw new Error(`Expected 2 objects (1 blob + 1 tree), got ${objectsCount}`);
   }
   
@@ -64,26 +89,29 @@ test('creates objects for nested directories', () => {
   run('mygit write-tree');
   
   // Should have: 2 blobs + 1 tree (dir1) + 1 tree (root) = 4 objects
-  const objectsCount = execSync('find .mygit/objects -type f | wc -l', { encoding: 'utf-8' }).trim();
+  const objectPath = path.join(process.cwd(), '.mygit', 'objects')
+  const objectsCount = countFiles(objectPath);
   
-  if (objectsCount !== '4') {
+  if (objectsCount !== 4) {
     throw new Error(`Expected 4 objects, got ${objectsCount}`);
   }
 });
 
+
 test('matches real git hash', () => {
   run('mygit init');
-  run('git init');
   
   fs.writeFileSync('test.txt', 'hello world\n');
   
   const mygitHash = run('mygit write-tree');
-  
+  fs.rmSync('.mygit', {recursive: true, force: true})
+
+  run('git init');
   run('git add -A');
   const gitHash = run('git write-tree');
   
   if (mygitHash !== gitHash) {
-    throw new Error(`Hash mismatch!\nMyGit: ${mygitHash}\nGit:   ${gitHash}`);
+    throw new Error(`Hash mismatch!\n\tMyGit: ${mygitHash}\n\tGit:   ${gitHash}`);
   }
 });
 
@@ -93,9 +121,10 @@ test('handles empty directory properly', () => {
   // Should create just 1 tree object for empty root
   const hash = run('mygit write-tree');
   
-  const objectsCount = execSync('find .mygit/objects -type f | wc -l', { encoding: 'utf-8' }).trim();
+  const objectPath = path.join(process.cwd(), '.mygit', 'objects')
+  const objectsCount = countFiles(objectPath);
   
-  if (objectsCount !== '1') {
+  if (objectsCount !== 1) {
     throw new Error(`Expected 1 object (empty root tree), got ${objectsCount}`);
   }
 });
@@ -109,11 +138,10 @@ test('deduplicates identical content', () => {
   run('mygit write-tree');
   
   // Should have: 1 blob (deduplicated) + 1 tree = 2 objects
-  const objectsCount = execSync('find .mygit/objects -type f | wc -l', { encoding: 'utf-8' }).trim();
+  const objectPath = path.join(process.cwd(), '.mygit', 'objects')
+  const objectsCount = countFiles(objectPath);
   
-  if (objectsCount !== '2') {
+  if (objectsCount !== 2) {
     throw new Error(`Expected 2 objects (deduplication should happen), got ${objectsCount}`);
   }
 });
-
-console.log('\n🧪 Running tests...\n');

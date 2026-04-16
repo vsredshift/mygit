@@ -9,75 +9,12 @@ MODES:
 
 const fs = require('fs');
 const path = require('path');
-const zlib = require('zlib');
 
-function readObject(hash) {
-    // 1. Read and decompress object from .mygit/objects
-    const dir = hash.slice(0, 2)
-    const file = hash.slice(2)
-    const objPath = path.join(process.cwd(), '.mygit', 'objects', dir, file)
+const parseTree = require('../helpers/parseTree')
+const readObject = require('../helpers/readObject')
 
-    if (!fs.existsSync(objPath)) {
-        console.error(`fatal: Not a valid object name ${hash}`)
-        process.exit(1)
-    }
 
-    const compressed = fs.readFileSync(objPath)
-    const decompressed = zlib.inflateSync(compressed)
-
-    // 2. Split at the null byte to separate header from content
-    const nullIndex = decompressed.indexOf(0)
-    const header = decompressed.slice(0, nullIndex).toString() // now as a readable string
-    const content = decompressed.slice(nullIndex + 1) // Content is still a Buffer, we can keep it as is for size calculations or type-specific processing
-
-    // 3. Parse header ('blob 12' or 'tree 143' or 'commit 345')
-    const spaceIndex = header.indexOf(' ')
-    const type = header.substring(0, spaceIndex) // 'blob' or 'tree' or 'commit'
-    const size = parseInt(header.substring(spaceIndex + 1)) // size in bytes
-
-    return { type, size, content }
-}
-
-function parseTree(content) {
-    // PARSE A TREE OBJECT INTO HUMAN-READABLE ENTRIES
-    // Tree format: <mode> <name>\0<20-byte-hash>
-
-    const entries = []
-    let offset = 0
-
-    while (offset < content.length) {
-        // find the null byte after the name
-        let nullPos = offset
-        while (content[nullPos] !== 0) nullPos++
-
-        // Extract mode and name
-        const entry = content.slice(offset, nullPos).toString()
-        const [mode, name] = entry.split(' ')
-
-        // Extract the 20-byte hash and convert it to hex
-        const hashBytes = content.slice(nullPos + 1, nullPos + 21)
-        const hash = hashBytes.toString('hex')
-
-        // Determine type from mode 
-        let type;
-
-        if (mode === '40000') {
-            type = 'tree'
-        } else if (mode === '160000') {
-            type = 'commit'
-        } else {
-            type = 'blob'
-        }
-
-        entries.push({mode, type, hash, name})
-
-        offset = nullPos + 21
-    }
-
-    return entries // An array with all the entries as js objects 
-}
-
-function prettyPrint(hash, type, content) {
+function prettyPrint(type, content) {
     // Format object content for display
 
     if (type === 'blob') {
@@ -135,7 +72,7 @@ function catFile(flags, hash) {
             console.log(size)
             break;
         case '-p':
-            prettyPrint(fullHash, type, content)
+            prettyPrint(type, content)
             break;
         default:
             console.error(`Unknown mode: ${flags}`)

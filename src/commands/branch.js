@@ -3,51 +3,8 @@ const path = require('path')
 const zlib = require('zlib')
 
 const colors = require('../utils/colors')
-
-function getCurrentBranch() {
-    const gitDir = path.join(process.cwd(), '.mygit')
-    const headPath = path.join(gitDir, 'HEAD')
-    if (!fs.existsSync(headPath)) {
-        return null
-    }
-
-    const headContent = fs.readFileSync(headPath, 'utf-8').trim()
-
-    if (headContent.startsWith('ref: ')) {
-        const branchRef = headContent.substring(5)
-
-        return branchRef.replace('refs/heads/', '')
-    }
-
-    return null
-}
-
-function getCurrentCommit() {
-    // Get the hash of the current commit 
-
-    const gitDir = path.join(process.cwd(), '.mygit')
-    const headPath = path.join(gitDir, 'HEAD')
-
-    if (!fs.existsSync(headPath)) {
-        return null
-    }
-
-    const headContent = fs.readFileSync(headPath, 'utf-8').trim()
-
-    if (headContent.startsWith('ref: ')) {
-        // Read the branch file to get commit hash
-        const branchRef = headContent.substring(5);
-        const branchPath = path.join(gitDir, branchRef);
-        
-        if (!fs.existsSync(branchPath)) {
-            return null; // Branch exists but has no commits yet
-        }
-
-        return fs.readFileSync(branchPath, 'utf8').trim()
-    }
-
-    return headContent
-}
+const getCurrentBranch = require('../helpers/getCurrentBranch')
+const getCurrentCommit = require('../helpers/getCurrentCommit')
 
 function getAllBranches() {
     // List all branches in refs/heads
@@ -119,7 +76,7 @@ function getCommitMessage(commitHash) {
 }
 
 function listBranches(verbose=false) {
-    const branches = getAllBranches() // Returns an array with all existing the branches objects
+    const branches = getAllBranches() // Returns an array with all existing branches objects
 
     if (branches.length === 0) {
         console.log('No branches found')
@@ -165,7 +122,7 @@ function createBranch(branchName) {
         process.exit(1);
     }
 
-    // Get current commit hash to point the new branch
+    // Get current commit hash to point to the new branch
     const currentCommit = getCurrentCommit()
 
     if (!currentCommit) {
@@ -202,8 +159,12 @@ function deleteBranch(branchName, force=false) {
     }
 
     // DELETE THE BRANCH FILE
-    fs.unlinkSync(branchPath)
-    console.log(`Deleted branch ${branchName}.`)
+    try {
+        fs.unlinkSync(branchPath)
+        console.log(`Deleted branch ${branchName}.`)
+    } catch (error) {
+        console.error(error.message)
+    }
 }
 
 // MAIN FUNCTION TO HANDLE THE BRANCH COMMAND

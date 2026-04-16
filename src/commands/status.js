@@ -7,6 +7,7 @@ const readObject = require('../helpers/readObject')
 const parseTree = require('../helpers/parseTree')
 const getCurrentBranch = require('../helpers/getCurrentBranch')
 const getCurrentCommit = require('../helpers/getCurrentCommit')
+const readIndex = require('../helpers/readIndex')
 
 function readTree(treeHash, prefix='') {
     // Recursively read a tree and return all the files
@@ -87,31 +88,50 @@ function status() {
         console.log (`On branch ${currentBranch}`)
     }
 
-    // 3. Get Current commit 
+    // 3. Get Current commit, index and working files 
 
     const currentCommit = getCurrentCommit()
+    const index = readIndex()
+    const workingFiles = getWorkingDirectoryFiles()
 
+    // 4. Handle case: no commits yet
     if (!currentCommit) {
         console.log('\nNo commits yet\n')
 
-        // Just show untracked files
-        const workingFiles = getWorkingDirectoryFiles()
-        const fileList  = Object.keys(workingFiles).sort()
+        const stagedFiles = Object.keys(index.entries).sort()
+        const unstagedFiles = []
 
-        if (fileList.length > 0) {
-            console.log('Untracked files:');
-            console.log('  (use "mygit add <file>..." to include in what will be committed)\n');
-            for (const file of fileList) {
-                console.log(`${colors.red}\t${file}${colors.reset}`)
+        // Files in working directory but not in index
+        for (const filePath of Object.keys(workingFiles)) {
+            if(!index.entries[filePath]) {
+                unstagedFiles.push(filePath)
+            }
+        }
+
+        unstagedFiles.sort()
+
+        if (stagedFiles.length > 0) {
+            console.log('Changes to be committed:')
+            console.log('   (use "mygit rm --cached <file>..." to unstage)\n')
+            for (const file of stagedFiles) {
+                console.log(`\t${colors.green}new file:   ${file}${colors.reset}`);
             }
             console.log('')
         }
 
+        if (unstagedFiles.length > 0) {
+            console.log('Untracked files:')
+            console.log('   (use "mygit add <file>..." to include in what will be committed)\n')
+            for (const file of unstagedFiles) {
+                console.log(`\t${colors.red}${file}${colors.reset}`)
+            }
+            console.log('')
+        }
         return
     }
 
     // 4. Get the tree for current commit
-    let commitedFiles = []
+    let commitedFiles = {}
 
     try {
         const { content } = readObject(currentCommit)
@@ -135,69 +155,125 @@ function status() {
         process.exit(1);
     }
 
-    // 5. GET FILES IN WORKING DIRECTORY
-    const workingFiles = getWorkingDirectoryFiles()
 
     // 6. COMPARE AND CATEGORIZE
 
-    const modified = []
-    const deleted = []
-    const newFiles = []
+    const stagedNew = [] // In index, not in commit (new file)
+    const stagedModified = [] // In both, different hash (modified)
+    const stagedDeleted = []  // In commit, not in index (deleted)
 
-    // Check for modified and deleted files 
-    for (const [filePath, commitedHash] of Object.entries(commitedFiles)) {
-        
+    const unstagedModified = [] // In index, in working, different hash
+    const unstagedDeleted = [] // In index, not in working
+    
+    const untracked = []  // In working, not in index
+
+
+    // Check staged changes (commit vs index)
+    const indexFiles = index.entries
+
+    for (const [filePath, fileInfo] of Object.entries(indexFiles)) {
+        if (commitedFiles[filePath]) {
+            // File exist in commit 
+            if (commitedFiles[filePath] !== fileInfo.hash) {
+                stagedModified.push(filePath)
+            }
+        } else  {
+            // File doesn't exist in commit - it's new
+            stagedNew.push(filePath);
+        }
+    }
+
+    // Check deleted files  (in commit but not in indedx)
+    for (const filePath of Object.keys(commitedFiles)) {
+        if (!indexFiles[filePath]) {
+            stagedDeleted.push(filePath)
+        }
+    }
+
+    // Check for unstaged changes (index vs working directory)
+    for (const [filePath, fileInfo] of Object.entries(indexFiles)) {
         if (workingFiles[filePath]) {
-            // File exist in both -check if modified (hashes are different)
-            if (workingFiles[filePath] !== commitedHash) {
-                modified.push(path.relative(process.cwd(), filePath))
+            // File exists in working directory
+            if (workingFiles[filePath] !== fileInfo.hash) {
+                unstagedModified.push(filePath);
             }
         } else {
-            // File exist in commit but not in working directory - deleted
-            deleted.push(path.relative(process.cwd(), filePath))
+            // File in index but not in working directory
+            unstagedDeleted.push(filePath);
         }
     }
 
-    // Check for new files
+    // Check for untracked files (in working but not in index)
     for (const filePath of Object.keys(workingFiles)) {
-        if (!commitedFiles[filePath]) {
-            newFiles.push(path.relative(process.cwd(), filePath))
+        if (!indexFiles[filePath]) {
+            untracked.push(filePath);
         }
     }
+    
 
     // 7. DISPLAY STATUS
 
+    const hasStaged = stagedNew.length > 0 || stagedModified.length > 0 || stagedDeleted.length > 0
+    const hasUnstaged = unstagedModified.length > 0 || unstagedDeleted.length > 0 
+    const hasUntracked = untracked.length > 0
+
+
     // Check if wd is clean
-    if (modified.length === 0 && deleted.length === 0 && newFiles.length === 0) {
+    if (!hasStaged && !hasUnstaged && !hasUntracked) {
         console.log('\nnothing to commit, working tree clean');
         return;
     }
 
     console.log('')
 
-    // Show modified files
-    if (modified.length > 0 || deleted.length > 0) {
+    // Show staged changes
+    if (hasStaged) {
+        console.log('Changes to be committed:')
+        console.log(' (use "mygit reset HEAD <file>..." to unstaged)\n')
+
+        stagedNew.sort()
+        for (const file of stagedNew) {
+            console.log(`\t${colors.green}new file:   ${file}${colors.reset}`);
+        }
+
+        stagedModified.sort();
+        for (const file of stagedModified) {
+            console.log(`\t${colors.green}modified:   ${file}${colors.reset}`);
+        }
+
+        stagedDeleted.sort();
+        for (const file of stagedDeleted) {
+            console.log(`\t${colors.green}deleted:    ${file}${colors.reset}`);
+        }
+
+        console.log('')
+    }
+
+    // Show unstaged changes
+    if (hasUnstaged) {
         console.log('Changes not staged for commit:');
         console.log('  (use "mygit add <file>..." to update what will be committed)\n');
         
-        modified.sort();
-        for (const file of modified) {
-            console.log(`${colors.red}\tmodified:   ${file}${colors.reset}`);
+        unstagedModified.sort();
+        for (const file of unstagedModified) {
+            console.log(`\t${colors.red}modified:   ${file}${colors.reset}`);
         }
-
-        deleted.sort();
-        for (const file of deleted) {
-            console.log(`${colors.red}\tdeleted:    ${file}${colors.reset}`);
+        
+        unstagedDeleted.sort();
+        for (const file of unstagedDeleted) {
+            console.log(`\t${colors.red}deleted:    ${file}${colors.reset}`);
         }
+        
+        console.log('');
     }
 
-    // Show new files
-    if (newFiles.length > 0) {
+    // Show untracked files
+    if (hasUntracked) {
         console.log('Untracked files:');
         console.log('  (use "mygit add <file>..." to include in what will be committed)\n');
         
-        newFiles.sort();
-        for (const file of newFiles) {
+        untracked.sort();
+        for (const file of untracked) {
             console.log(`\t${colors.red}${file}${colors.reset}`);
         }
         

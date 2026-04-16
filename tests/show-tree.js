@@ -1,47 +1,14 @@
-
-const fs = require('fs');
-const path = require('path');
-const zlib = require('zlib');
-
-function readObject(hash) {
-  const dir = hash.slice(0, 2);
-  const filename = hash.slice(2);
-  const objectPath = path.join(process.cwd(), '.mygit', 'objects', dir, filename);
-  
-  const compressed = fs.readFileSync(objectPath);
-  const decompressed = zlib.inflateSync(compressed);
-  
-  const nullIndex = decompressed.indexOf(0);
-  const header = decompressed.slice(0, nullIndex).toString();
-  const content = decompressed.slice(nullIndex + 1);
-  
-  return { header, content };
-}
-
-function parseTree(content) {
-  const entries = [];
-  let offset = 0;
-  
-  while (offset < content.length) {
-    let nullPos = offset;
-    while (content[nullPos] !== 0) nullPos++;
-    
-    const entry = content.slice(offset, nullPos).toString();
-    const [mode, name] = entry.split(' ');
-    
-    const hashBytes = content.slice(nullPos + 1, nullPos + 21);
-    const hash = hashBytes.toString('hex');
-    
-    entries.push({ mode, name, hash });
-    offset = nullPos + 21;
-  }
-  
-  return entries;
-}
+const readObject = require('../src/helpers/readObject')
+const parseTree = require('../src/helpers/parseTree')
 
 function showTree(hash, indent = '') {
-  const { header, content } = readObject(hash);
+  const { header, content, type } = readObject(hash);
 
+  if (type !== 'tree') {
+    console.error('The hash provided does not correspond to a tree object')
+    return
+  }
+  
   console.log(`\n🌳 Tree ${hash}\n`);
   
   if (header.startsWith('blob')) {

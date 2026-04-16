@@ -1,5 +1,5 @@
-// THE COMMIT-TREE COMMAND FORMAT
-/*
+// THE COMMIT-TREE COMMAND 
+/* COMMIT TREE FORMAT
 commit <size>\0tree <tree hash>
 parent <parent hash>
 author <name> <email> <timestamp> <timezone>

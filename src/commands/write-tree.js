@@ -2,7 +2,7 @@
 Tree object structure
     tree <size>\0<entires>
 
-Each entry <entry>
+Each entry of <entries>
     <mode> <name>\0<20-byte-binary-hash(sha1)>    
 
 <mode> = file type (dir, file, .exe)
@@ -11,36 +11,8 @@ Each entry <entry>
 <20-byte-binary-hash(sha1)> = the hash of the blob/tree stored as raw binary */
 const fs = require('fs')
 const path = require('path')
-const crypto = require('crypto')
-const zlib = require('zlib')
 
-function hashObjectContent(content, type='blob') {
-    // Build header: "blob 12\0" or "tree 156\0"
-    const header = `${type} ${content.length}\0`
-
-    // Concatenate header + content
-    const store = Buffer.concat([Buffer.from(header), content])
-
-    // Hash it
-    const hash = crypto.createHash('sha1').update(store).digest('hex')
-
-    // Compress it
-    const compressed = zlib.deflateSync(store)
-
-    // Write to .mygit/objects/xx/xxxxx.....
-    const dir = hash.slice(0, 2)
-    const filename = hash.slice(2)
-    const objDir = path.join(process.cwd(), '.mygit', 'objects', dir)
-    const objPath = path.join(objDir, filename)
-
-    fs.mkdirSync(objDir, {recursive: true})
-
-    if (!fs.existsSync(objPath)) {
-        fs.writeFileSync(objPath, compressed)
-    }
-
-    return hash
-}
+const hashObjectContent = require('../helpers/hashObjectContent')
 
 // GET FILE MODE
 /*

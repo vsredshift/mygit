@@ -12,15 +12,20 @@ function mygitInit(targetDir=process.cwd()) {
         console.log("A '.mygit' directory already exist inside this folder.")
         return
     }
+    
+    try {
+        fs.mkdirSync(mygitDir, {recursive: true})
+        fs.mkdirSync(objectsDir, {recursive: true})
+        fs.mkdirSync(refsDir, {recursive: true})
+        fs.mkdirSync(headsDir, {recursive: true})
 
-    fs.mkdirSync(mygitDir, {recursive: true})
-    fs.mkdirSync(objectsDir, {recursive: true})
-    fs.mkdirSync(refsDir, {recursive: true})
-    fs.mkdirSync(headsDir, {recursive: true})
+        fs.writeFileSync(headFile, 'ref: refs/heads/main\n')
 
-    fs.writeFileSync(headFile, 'ref: refs/heads/main\n')
-
-    console.log(`Initialized empty mygit repository in ${mygitDir}`)
+        console.log(`Initialized empty mygit repository in ${mygitDir}`)
+    } catch (error) {
+        console.error('Error initializing mygit repository:', error.message);
+        process.exit(1);
+    }
 
 }
 

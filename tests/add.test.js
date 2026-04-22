@@ -20,6 +20,8 @@ test.afterEach(cleanupRepo)
 
 // ____TESTS____
 
+console.log('\nTESTING ADD\n')
+
 test('add command stages a single file into index', () => {
 
     fs.writeFileSync('file.txt', 'hello world')
@@ -109,3 +111,4 @@ test('add . ignores files inside .mygit directory', ()=> {
     assert.ok(index.entries['tracked.txt'])
     assert.strictEqual(index.entries['.mygit/secret'], undefined)
 })
+

@@ -8,7 +8,8 @@ const hashObject = require('../src/commands/hash-object');
 const {setupRepo, cleanupRepo,baseDir} = require('./helpers/setup')
 
 function setup() {
-    fs.rmSync(testDir, { recursive: true, force: true });
+    cleanupRepo()
+    
     fs.mkdirSync(testDir, { recursive: true });
     process.chdir(testDir);
     fs.mkdirSync(path.join(testDir, '.mygit', 'objects'), { recursive: true });
@@ -23,6 +24,8 @@ function cleanup() {
 test.beforeEach(setupRepo);
 test.afterEach(cleanupRepo);
 
+
+console.log('\nTESTING HASH-OBJECT\n')
 
 // 🧪 Test 1: hash is generated correctly
 test('hashObject returns a valid SHA-1 hash', () => {
